@@ -5,8 +5,28 @@ import supabase from "@/lib/supabaseClient"
 export default function AdminPage() {
     const [userCount, setUserCount ] = useState(0)
     useEffect(() => {
+        checkAdmin()
         getStats()
     }, [])
+
+    async function checkAdmin() {
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user){
+            window.location.href = "/"
+            return
+        }
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .single()
+
+        if (!profile?.is_superadmin) {
+            alert("You are not allowed to access the admin panel.")
+            window.location.href = "/"
+        }
+    }
 
     async function getStats() {
         const { count } = await supabase
@@ -19,7 +39,8 @@ export default function AdminPage() {
     return (
         <div>
             <h1>Admin Dashboard</h1>
-            <p>This is the admin panel.</p>
+            <h2>Statistics</h2>
+            <p>Total Users: {userCount}</p>
         </div>
     )
 }
