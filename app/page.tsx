@@ -1,12 +1,8 @@
-"use client";
-
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-
-export default function Home(){
-  const router = useRouter();
-  useEffect(() => {
-    router.push("/admin");
-  }, [router]);
-  return <p>Loading admin panel...</p>;
+export default function AdminPage() {
+  return (
+    <div>
+      <h1>Admin Dashboard</h1>
+      <p>Admin panel is working.</p>
+    </div>
+  );
 }
