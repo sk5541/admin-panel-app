@@ -13,7 +13,7 @@ export default function AdminPage() {
         const { data: { user } } = await supabase.auth.getUser()
 
         if (!user){
-            window.location.href = "/"
+            console.log("No user logged in")
             return
         }
         const { data: profile } = await supabase
