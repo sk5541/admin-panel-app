@@ -12,10 +12,10 @@ export default function AdminPage() {
     async function checkAdmin() {
         const { data: { user } } = await supabase.auth.getUser()
 
-        //if (!user){
-            //console.log("No user logged in")
-            //return
-        //}
+        if (!user){
+            console.log("No user logged in")
+            return
+        }
         const { data: profile } = await supabase
             .from("profiles")
             .select("*")
