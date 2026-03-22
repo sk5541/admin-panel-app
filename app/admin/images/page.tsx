@@ -2,10 +2,13 @@
 import { useEffect, useState } from "react"
 import supabase from "@/lib/supabaseClient"
 
+
 export default function ImagesPage() {
     const [images, setImages] = useState<any[]>([])
     const [url, setUrl ] = useState("")
     const [editingId, setEditingId] = useState<number | null>(null)
+
+    const [file, setFile] = useState<File | null>(null)
 
     useEffect(() => {
         getImages()
@@ -18,12 +21,40 @@ export default function ImagesPage() {
         setImages(data || [])
     }
 
+    async function uploadImage(){
+        if(!file) return null
+
+        const fileName = `${Date.now()}-${file.name}`
+
+        const { data, error } = await supabase.storage
+            .from("images")
+            .upload(fileName, file)
+
+        if (error) {
+            console.error("Upload error:", error)
+            return null
+        }
+        return data.path
+    }
+
     async function createImage() {
+        let imageUrl = url
+        if (file){
+            const path = await uploadImage()
+            if (!path) return
+
+            const { data } = supabase.storage
+                .from("images")
+                .getPublicUrl(path)
+            imageUrl = data.publicUrl
+
+        }
         await supabase
             .from("images")
-            .insert([{ url }])
+            .insert([{ url: imageUrl }])
         
         setUrl("")
+        setFile(null)
         getImages()
     }
 
@@ -50,6 +81,12 @@ export default function ImagesPage() {
     return (
         <div>
             <h1>Images</h1>
+
+            <input
+                type="file"
+                onChange={(e) =>setFile(e.target.files?.[0] || null)}
+            />
+
             <input
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
@@ -64,6 +101,7 @@ export default function ImagesPage() {
 
             {images.map((image) => (
                 <div key={image.id}>
+                    <img src={image.url} alt="" width={200} />
                     <p>{image.url}</p>
                     <button onClick={() => {
                         setEditingId(image.id)
