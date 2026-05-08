@@ -1,168 +1,138 @@
 "use client"
 import { useEffect, useState } from "react"
 import supabase from "@/lib/supabaseClient"
-
+import { fieldStyle, btnPrimary, btnSecondary, btnEdit, btnDanger, formBox, cardStyle, pageTitle, label, valueText, dimText } from "@/lib/adminStyles"
 
 export default function CaptionExamplesPage() {
-    const [items, setItems ] = useState<any[]>([])
-    const [imageDescription, setImageDescription] = useState("")
-    const [caption, setCaption] = useState("")
-    const [explanation, setExplanation] = useState("")
-    const [priority, setPriority] = useState("0")
-    const [editingId, setEditingId ] = useState<number | null>(null)
+  const [items, setItems] = useState<any[]>([])
+  const [imageDescription, setImageDescription] = useState("")
+  const [caption, setCaption] = useState("")
+  const [explanation, setExplanation] = useState("")
+  const [priority, setPriority] = useState("0")
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [message, setMessage] = useState("")
 
+  useEffect(() => { getItems() }, [])
 
-    useEffect(() => {
-        getItems()
-    }, [])
+  async function getItems() {
+    const { data, error } = await supabase
+      .from("caption_examples")
+      .select("*")
+      .order("id", { ascending: true })
+    if (error) { console.error(error); return }
+    setItems(data || [])
+  }
 
-    async function getItems() {
-        const { data, error } = await supabase
-            .from("caption_examples")
-            .select("*")
-            .order("id", {ascending: true})
-
-        if(error){
-            console.error("Error fetching caption examples:", error)
-            return
-        }
-
-        setItems(data || [])
+  async function createItem() {
+    if (!imageDescription.trim() || !caption.trim()) {
+      setMessage("Image description and caption are required.")
+      return
     }
+    const { error } = await supabase.from("caption_examples").insert([{
+      image_description: imageDescription,
+      caption,
+      explanation,
+      priority: Number(priority),
+    }])
+    if (error) { setMessage("Error: " + error.message); return }
+    setMessage("Created!")
+    clearForm()
+    getItems()
+  }
 
-    async function createItem(){
-        const { error } = await supabase
-            .from("caption_examples")
-            .insert([{
-                image_description: imageDescription,
-                caption: caption,
-                explanation: explanation,
-                priority: Number(priority)
-            }])
+  async function updateItem(id: number) {
+    const { error } = await supabase.from("caption_examples").update({
+      image_description: imageDescription,
+      caption,
+      explanation,
+      priority: Number(priority),
+    }).eq("id", id)
+    if (error) { setMessage("Error: " + error.message); return }
+    setMessage("Updated!")
+    clearForm()
+    getItems()
+  }
 
-        if(error){
-            console.error("Error creating caption example:", error)
-            return
-        }
+  async function deleteItem(id: number) {
+    if (!confirm("Delete this caption example?")) return
+    await supabase.from("caption_examples").delete().eq("id", id)
+    getItems()
+  }
 
-        clearForm()
-        getItems()
-    }
+  function clearForm() {
+    setImageDescription(""); setCaption(""); setExplanation(""); setPriority("0")
+    setEditingId(null); setMessage("")
+  }
 
-    async function updateItem(id: number){
-        const { error } = await supabase
-            .from("caption_examples")
-            .update({
-                image_description: imageDescription,
-                caption: caption,
-                explanation: explanation,
-                priority: Number(priority)
-            })
-            .eq("id", id)
+  return (
+    <div>
+      <h1 style={pageTitle}>Caption Examples</h1>
 
-        if(error){
-            console.error("Error updating caption example:", error)
-            return
-        }
+      <div style={formBox}>
+        <h2 style={{ color: "#ccc", fontSize: "14px", marginBottom: "16px" }}>
+          {editingId ? `Editing #${editingId}` : "Add New Caption Example"}
+        </h2>
 
-        clearForm()
-        getItems()
-    }
+        <span style={label}>Image Description *</span>
+        <textarea
+          value={imageDescription}
+          onChange={(e) => setImageDescription(e.target.value)}
+          placeholder="Describe the image..."
+          rows={3}
+          style={{ ...fieldStyle, resize: "vertical" }}
+        />
 
-    async function deleteItem(id: number){
-        const { error } = await supabase
-            .from("caption_examples")
-            .delete()
-            .eq("id", id)
+        <span style={label}>Caption *</span>
+        <input value={caption} onChange={(e) => setCaption(e.target.value)}
+          placeholder="The caption text" style={fieldStyle} />
 
-        if(error){
-            console.error("Error updating caption example:", error)
-            return
-        }
+        <span style={label}>Explanation</span>
+        <input value={explanation} onChange={(e) => setExplanation(e.target.value)}
+          placeholder="Why this caption works..." style={fieldStyle} />
 
-        getItems()
+        <span style={label}>Priority</span>
+        <input type="number" value={priority} onChange={(e) => setPriority(e.target.value)}
+          style={{ ...fieldStyle, width: "100px" }} />
 
-        
-    }
+        {message && (
+          <p style={{ color: message.startsWith("Error") ? "#f55" : "#5f5", fontSize: "12px", marginBottom: "8px" }}>
+            {message}
+          </p>
+        )}
 
-    function clearForm(){
-        setImageDescription("")
-        setCaption("")
-        setExplanation("")
-        setPriority("0")
-        setEditingId(null)
-    }
-
-
-    return (
-        <div>
-            <h1>Caption Examples</h1>
-
-            <input
-                value={imageDescription}
-                onChange={(e) => setImageDescription(e.target.value)}
-                placeholder="Image description"
-            />
-            <br />
-
-            <input
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                placeholder="Caption"
-            />
-            <br />
-
-            <input
-                value={explanation}
-                onChange={(e) => setExplanation(e.target.value)}
-                placeholder="Explanation"
-            />
-            <br />
-
-            <input
-                type="number"
-                value={priority}
-                onChange={(e) => setPriority(e.target.value)}
-                placeholder="Priority"
-            />
-            <br />
-
-            {editingId ? (
-                <button onClick={() => updateItem(editingId)}>Update</button>
-            ) : (
-                <button onClick={createItem}>Add</button>
-            )}
-            <button onClick={clearForm}>Clear</button>
-
-            {items.length === 0 && <p>No records found.</p>}
-
-            {items.map((item) => (
-                <div key={item.id}>
-                    <p><strong>ID:</strong>{item.id}</p>
-                    <p><strong>Image Description:</strong>{item.image_description}</p>
-                    <p><strong>Caption:</strong>{item.caption}</p>
-                    <p><strong>Explanation:</strong>{item.explanation}</p>
-                    <p><strong>Priority:</strong>{item.priority}</p>
-
-                    <button
-                        onClick={() => {
-                            setEditingId(item.id)
-                            setImageDescription(item.image_description || "")
-                            setCaption(item.caption || "")
-                            setExplanation(item.explanation || "")
-                            setPriority(String(item.priority ?? 0))
-                        }}
-                    >
-                        Edit
-                    </button>
-
-                    <button onClick={() => deleteItem(item.id)}>
-                        Delete
-                    </button>
-
-                    <hr />
-                </div>
-            ))}
+        <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+          <button onClick={editingId ? () => updateItem(editingId) : createItem} style={btnPrimary}>
+            {editingId ? "Save Changes" : "Add Example"}
+          </button>
+          <button onClick={clearForm} style={btnSecondary}>Cancel</button>
         </div>
-    )
+      </div>
+
+      <p style={dimText}>{items.length} record{items.length !== 1 ? "s" : ""}</p>
+
+      {items.map((item) => (
+        <div key={item.id} style={cardStyle}>
+          <div style={{ flex: 1 }}>
+            <span style={dimText}>#{item.id} · Priority: {item.priority}</span>
+            <p style={{ ...valueText, marginTop: "4px" }}><strong style={{ color: "#888" }}>Image: </strong>{item.image_description}</p>
+            <p style={valueText}><strong style={{ color: "#888" }}>Caption: </strong>{item.caption}</p>
+            {item.explanation && <p style={dimText}><em>{item.explanation}</em></p>}
+          </div>
+          <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+            <button style={btnEdit} onClick={() => {
+              setEditingId(item.id)
+              setImageDescription(item.image_description || "")
+              setCaption(item.caption || "")
+              setExplanation(item.explanation || "")
+              setPriority(String(item.priority ?? 0))
+              window.scrollTo(0, 0)
+            }}>Edit</button>
+            <button style={btnDanger} onClick={() => deleteItem(item.id)}>Delete</button>
+          </div>
+        </div>
+      ))}
+
+      {items.length === 0 && <p style={dimText}>No records found.</p>}
+    </div>
+  )
 }

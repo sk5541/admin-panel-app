@@ -1,173 +1,110 @@
 "use client"
 import { useEffect, useState } from "react"
 import supabase from "@/lib/supabaseClient"
-
+import { fieldStyle, btnPrimary, btnSecondary, btnEdit, btnDanger, formBox, cardStyle, pageTitle, label, valueText, dimText } from "@/lib/adminStyles"
 
 export default function LlmModelsPage() {
-    const [items, setItems ] = useState<any[]>([])
-    const [name, setName] = useState("")
-    const [llmProviderId, setLlmProviderId] = useState("")
-    const [providerModelId, setProviderModelId] = useState("")
-    const [isTemperatureSupported, setIsTemperatureSupported] = useState(false)
-    const [editingId, setEditingId ] = useState<number | null>(null)
+  const [items, setItems] = useState<any[]>([])
+  const [name, setName] = useState("")
+  const [llmProviderId, setLlmProviderId] = useState("")
+  const [providerModelId, setProviderModelId] = useState("")
+  const [isTemperatureSupported, setIsTemperatureSupported] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [message, setMessage] = useState("")
 
+  useEffect(() => { getItems() }, [])
 
-    useEffect(() => {
-        getItems()
-    }, [])
+  async function getItems() {
+    const { data, error } = await supabase.from("llm_models").select("*").order("id", { ascending: true })
+    if (error) { console.error(error); return }
+    setItems(data || [])
+  }
 
-    async function getItems() {
-        const { data, error } = await supabase
-            .from("llm_models")
-            .select("*")
-            .order("id", {ascending: true})
+  async function createItem() {
+    if (!name.trim()) { setMessage("Name is required."); return }
+    const { error } = await supabase.from("llm_models").insert([{
+      name, llm_provider_id: Number(llmProviderId), provider_model_id: providerModelId, is_temperature_supported: isTemperatureSupported,
+    }])
+    if (error) { setMessage("Error: " + error.message); return }
+    setMessage("Created!")
+    clearForm(); getItems()
+  }
 
-        if(error){
-            console.error("Error fetching llm models:", error)
-            return
-        }
+  async function updateItem(id: number) {
+    const { error } = await supabase.from("llm_models").update({
+      name, llm_provider_id: Number(llmProviderId), provider_model_id: providerModelId, is_temperature_supported: isTemperatureSupported,
+    }).eq("id", id)
+    if (error) { setMessage("Error: " + error.message); return }
+    setMessage("Updated!")
+    clearForm(); getItems()
+  }
 
-        setItems(data || [])
-    }
+  async function deleteItem(id: number) {
+    if (!confirm("Delete this model?")) return
+    await supabase.from("llm_models").delete().eq("id", id)
+    getItems()
+  }
 
-    async function createItem(){
-        const { error } = await supabase
-            .from("llm_models")
-            .insert([{
-                name: name,
-                llm_provider_id: Number(llmProviderId),
-                provider_model_id: providerModelId,
-                is_temperature_supported: isTemperatureSupported
-            }])
+  function clearForm() {
+    setName(""); setLlmProviderId(""); setProviderModelId(""); setIsTemperatureSupported(false)
+    setEditingId(null); setMessage("")
+  }
 
-        if(error){
-            console.error("Error creating llm model:", error)
-            return
-        }
+  return (
+    <div>
+      <h1 style={pageTitle}>LLM Models</h1>
 
-        clearForm()
-        getItems()
-    }
+      <div style={formBox}>
+        <h2 style={{ color: "#ccc", fontSize: "14px", marginBottom: "16px" }}>
+          {editingId ? `Editing #${editingId}` : "Add New LLM Model"}
+        </h2>
 
-    async function updateItem(id: number){
-        const { error } = await supabase
-            .from("llm_models")
-            .update({
-                name: name,
-                llm_provider_id: Number(llmProviderId),
-                provider_model_id: providerModelId,
-                is_temperature_supported: isTemperatureSupported
-            })
-            .eq("id", id)
+        <span style={label}>Model Name *</span>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. claude-sonnet-4-20250514" style={fieldStyle} />
 
-        if(error){
-            console.error("Error updating llm model:", error)
-            return
-        }
+        <span style={label}>LLM Provider ID</span>
+        <input type="number" value={llmProviderId} onChange={(e) => setLlmProviderId(e.target.value)} placeholder="Provider ID number" style={{ ...fieldStyle, width: "160px" }} />
 
-        clearForm()
-        getItems()
-    }
+        <span style={label}>Provider Model ID</span>
+        <input value={providerModelId} onChange={(e) => setProviderModelId(e.target.value)} placeholder="e.g. claude-sonnet-4-20250514" style={fieldStyle} />
 
-    async function deleteItem(id: number){
-        const { error } = await supabase
-            .from("llm_models")
-            .delete()
-            .eq("id", id)
+        <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "#ccc", fontSize: "13px", marginBottom: "16px", cursor: "pointer" }}>
+          <input type="checkbox" checked={isTemperatureSupported} onChange={(e) => setIsTemperatureSupported(e.target.checked)} />
+          Temperature supported
+        </label>
 
-        if(error){
-            console.error("Error deleting llm model:", error)
-            return
-        }
+        {message && <p style={{ color: message.startsWith("Error") ? "#f55" : "#5f5", fontSize: "12px", marginBottom: "8px" }}>{message}</p>}
 
-        getItems()
-
-        
-    }
-
-    function clearForm(){
-        setName("")
-        setLlmProviderId("")
-        setProviderModelId("")
-        setIsTemperatureSupported(false)
-        setEditingId(null)
-    }
-
-
-    return (
-        <div>
-            <h1>LLM Models</h1>
-
-            <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Name"
-            />
-            <br />
-
-            <input
-                type="number"
-                value={llmProviderId}
-                onChange={(e) => setLlmProviderId(e.target.value)}
-                placeholder="LLM Provider ID"
-            />
-            <br />
-
-            <input
-                value={providerModelId}
-                onChange={(e) => setProviderModelId(e.target.value)}
-                placeholder="Provider Model ID"
-            />
-            <br />
-
-            <label>
-                <input
-                    type="checkbox"
-                    checked={isTemperatureSupported}
-                    onChange={(e) => setIsTemperatureSupported(e.target.checked)}
-                />
-                Is Temperature Supported
-            </label>
-            <br />
-
-        
-
-            {editingId ? (
-                <button onClick={() => updateItem(editingId)}>Update</button>
-            ) : (
-                <button onClick={createItem}>Add</button>
-            )}
-            <button onClick={clearForm}>Clear</button>
-
-            {items.length === 0 && <p>No records found.</p>}
-
-            {items.map((item) => (
-                <div key={item.id}>
-                    <p><strong>ID:</strong>{item.id}</p>
-                    <p><strong>Name:</strong>{item.name}</p>
-                    <p><strong>LLM Provider ID:</strong>{item.llm_provider_id}</p>
-                    <p><strong>Provider Model ID:</strong>{item.provider_model_id}</p>
-                    <p><strong>Temperature Supported:</strong>{item.is_temperature_supported ? "Yes" : "No"}</p>
-
-                    <button
-                        onClick={() => {
-                            setEditingId(item.id)
-                            setName(item.name || "")
-                            setLlmProviderId(item.llm_provider_id ?? "")
-                            setProviderModelId(item.provider_model_id || "")
-                            setIsTemperatureSupported(!!item.is_temperature_supported)
-                        }}
-                    >
-                        Edit
-                    </button>
-
-                    <button onClick={() => deleteItem(item.id)}>
-                        Delete
-                    </button>
-
-                    <hr />
-                </div>
-            ))}
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button onClick={editingId ? () => updateItem(editingId) : createItem} style={btnPrimary}>
+            {editingId ? "Save Changes" : "Add Model"}
+          </button>
+          <button onClick={clearForm} style={btnSecondary}>Cancel</button>
         </div>
-    )
+      </div>
+
+      <p style={dimText}>{items.length} model{items.length !== 1 ? "s" : ""}</p>
+
+      {items.map((item) => (
+        <div key={item.id} style={cardStyle}>
+          <div style={{ flex: 1 }}>
+            <span style={dimText}>#{item.id}</span>
+            <p style={{ ...valueText, marginTop: "4px", fontWeight: "600" }}>{item.name}</p>
+            <p style={dimText}>Provider ID: {item.llm_provider_id} · Model ID: {item.provider_model_id}</p>
+            <p style={dimText}>Temperature: {item.is_temperature_supported ? "✓ Supported" : "✗ Not supported"}</p>
+          </div>
+          <div style={{ display: "flex", gap: "6px" }}>
+            <button style={btnEdit} onClick={() => {
+              setEditingId(item.id); setName(item.name || "")
+              setLlmProviderId(item.llm_provider_id ?? ""); setProviderModelId(item.provider_model_id || "")
+              setIsTemperatureSupported(!!item.is_temperature_supported); window.scrollTo(0, 0)
+            }}>Edit</button>
+            <button style={btnDanger} onClick={() => deleteItem(item.id)}>Delete</button>
+          </div>
+        </div>
+      ))}
+
+      {items.length === 0 && <p style={dimText}>No models found.</p>}
+    </div>
+  )
 }
