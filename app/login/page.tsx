@@ -32,34 +32,35 @@ export default function LoginPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: `linear-gradient(135deg, ${colors.bg}, ${colors.cream})`,
+        background: "transparent",
         fontFamily: "Arial, Helvetica, sans-serif",
         padding: "24px",
       }}
     >
       <div
         style={{
-          background: colors.card,
+          background: "rgba(255, 250, 241, 0.78)",
           border: `1px solid ${colors.border}`,
-          borderRadius: "28px",
-          padding: "42px",
+          borderRadius: "32px",
+          padding: "44px",
           width: "100%",
-          maxWidth: "420px",
+          maxWidth: "430px",
           textAlign: "center",
-          boxShadow: "0 24px 70px rgba(92, 64, 51, 0.12)",
+          boxShadow: "0 28px 80px rgba(78, 58, 46, 0.18)",
+          backdropFilter: "blur(18px)",
         }}
       >
         <div
           style={{
-            width: "54px",
-            height: "54px",
-            borderRadius: "18px",
+            width: "58px",
+            height: "58px",
+            borderRadius: "20px",
             background: colors.blue,
             margin: "0 auto 22px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: colors.brown,
+            color: colors.text,
             fontSize: "24px",
             fontWeight: "800",
           }}
@@ -83,10 +84,11 @@ export default function LoginPage() {
         <h1
           style={{
             color: colors.text,
-            fontSize: "32px",
+            fontSize: "34px",
             marginBottom: "10px",
             letterSpacing: "-0.04em",
             fontWeight: "800",
+            fontFamily: "Georgia, serif",
           }}
         >
           Welcome back
@@ -125,19 +127,19 @@ export default function LoginPage() {
           style={{
             width: "100%",
             padding: "13px 16px",
-            background: loading ? colors.cream : colors.brown,
-            color: loading ? colors.muted : "#fff",
+            background: loading ? colors.cream : colors.olive,
+            color: loading ? colors.muted : "#fffaf1",
             border: "none",
             borderRadius: "999px",
             fontSize: "14px",
-            fontWeight: "700",
+            fontWeight: "800",
             cursor: loading ? "not-allowed" : "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             gap: "10px",
             letterSpacing: "0.01em",
-            boxShadow: loading ? "none" : "0 12px 28px rgba(92, 64, 51, 0.22)",
+            boxShadow: loading ? "none" : "0 12px 28px rgba(98, 107, 46, 0.25)",
           }}
         >
           <svg width="18" height="18" viewBox="0 0 18 18">
