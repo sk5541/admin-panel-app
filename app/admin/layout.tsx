@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 import supabase from "@/lib/supabaseClient"
 import { colors } from "@/lib/adminStyles"
 
@@ -27,11 +28,45 @@ const NAV_ITEMS = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
+  const [checking, setChecking] = useState(true)
+  const [authenticated, setAuthenticated] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.replace("/login")
+      } else {
+        setAuthenticated(true)
+        setChecking(false)
+      }
+    })
+  }, [router])
 
   async function handleSignOut() {
     await supabase.auth.signOut()
     router.push("/login")
   }
+
+  if (checking) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "Arial, Helvetica, sans-serif",
+          color: colors.muted,
+          fontSize: "14px",
+          background: "transparent",
+        }}
+      >
+        Checking authentication...
+      </div>
+    )
+  }
+
+  if (!authenticated) return null
 
   return (
     <div
@@ -67,7 +102,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             Admin
           </div>
-
           <div style={{ color: colors.muted, fontSize: "12px", marginTop: "4px" }}>
             Control Panel
           </div>
@@ -76,7 +110,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav style={{ flex: 1, overflowY: "auto", padding: "14px 12px" }}>
           {NAV_ITEMS.map((item) => {
             const active = pathname === item.href
-
             return (
               <Link
                 key={item.href}
