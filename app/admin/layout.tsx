@@ -39,25 +39,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         display: "flex",
         minHeight: "100vh",
         fontFamily: "Arial, Helvetica, sans-serif",
-        background: colors.bg,
+        background: "transparent",
       }}
     >
       <aside
         style={{
-          width: "250px",
-          background: colors.card,
+          width: "260px",
+          background: "rgba(255, 250, 241, 0.72)",
           borderRight: `1px solid ${colors.border}`,
           display: "flex",
           flexDirection: "column",
           padding: "24px 0",
           flexShrink: 0,
-          boxShadow: "8px 0 30px rgba(92, 64, 51, 0.05)",
+          boxShadow: "12px 0 40px rgba(78, 58, 46, 0.12)",
+          backdropFilter: "blur(18px)",
         }}
       >
         <div style={{ padding: "0 22px 24px", borderBottom: `1px solid ${colors.border}` }}>
-          <div style={{ color: colors.brown, fontWeight: "800", fontSize: "20px", letterSpacing: "-0.03em" }}>
+          <div
+            style={{
+              color: colors.text,
+              fontWeight: "800",
+              fontSize: "22px",
+              letterSpacing: "-0.03em",
+              fontFamily: "Georgia, serif",
+            }}
+          >
             Admin
           </div>
+
           <div style={{ color: colors.muted, fontSize: "12px", marginTop: "4px" }}>
             Control Panel
           </div>
@@ -73,13 +83,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 href={item.href}
                 style={{
                   display: "block",
-                  padding: "10px 14px",
-                  marginBottom: "4px",
+                  padding: "11px 15px",
+                  marginBottom: "5px",
                   fontSize: "14px",
-                  fontWeight: active ? "700" : "500",
-                  color: active ? colors.brown : colors.muted,
-                  background: active ? colors.cream : "transparent",
-                  borderRadius: "12px",
+                  fontWeight: active ? "800" : "500",
+                  color: active ? "#fffaf1" : colors.text,
+                  background: active ? colors.olive : "transparent",
+                  borderRadius: "999px",
                   textDecoration: "none",
                   transition: "all 0.15s ease",
                 }}
@@ -96,14 +106,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             style={{
               width: "100%",
               padding: "11px",
-              background: colors.brown,
+              background: colors.olive,
               border: "none",
               borderRadius: "999px",
-              color: "#fff",
+              color: "#fffaf1",
               fontSize: "12px",
               cursor: "pointer",
               letterSpacing: "0.05em",
-              fontWeight: "700",
+              fontWeight: "800",
+              boxShadow: "0 10px 22px rgba(98, 107, 46, 0.25)",
             }}
           >
             SIGN OUT
@@ -111,7 +122,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      <main style={{ flex: 1, padding: "42px", overflowY: "auto", color: colors.text }}>
+      <main
+        style={{
+          flex: 1,
+          padding: "42px",
+          overflowY: "auto",
+          color: colors.text,
+        }}
+      >
         {children}
       </main>
     </div>

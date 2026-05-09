@@ -1,7 +1,9 @@
 "use client"
+
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import supabase from "@/lib/supabaseClient"
+import { colors } from "@/lib/adminStyles"
 
 export default function AdminPage() {
   const [stats, setStats] = useState<any[]>([])
@@ -20,6 +22,7 @@ export default function AdminPage() {
 
   async function loadStats() {
     const tables = [
+      { table: "profiles", label: "Users", href: "/admin/users" },
       { table: "images", label: "Images", href: "/admin/images" },
       { table: "captions", label: "Captions", href: "/admin/captions" },
       { table: "caption_requests", label: "Caption Requests", href: "/admin/caption-requests" },
@@ -29,19 +32,13 @@ export default function AdminPage() {
       { table: "llm_providers", label: "LLM Providers", href: "/admin/llm-providers" },
       { table: "caption_votes", label: "Total Votes", href: "/admin/captions" },
     ]
-    // Add this inside loadStats, after setStats(results):
-    const { count: userCount } = await supabase
-        .from("profiles")
-        .select("id", { count: "exact", head: true })
-    setStats(prev => prev.map(s => 
-        s.label === "Total Users" ? { ...s, value: userCount ?? 0 } : s
-    ))
 
     const results = await Promise.all(
       tables.map(async ({ table, label, href }) => {
         const { count } = await supabase
           .from(table)
           .select("*", { count: "exact", head: true })
+
         return { label, value: count ?? 0, href }
       })
     )
@@ -51,19 +48,40 @@ export default function AdminPage() {
   }
 
   async function loadVoteStats() {
-    // Get all votes
-    const { data: votes } = await supabase
+    const { count: totalVotes } = await supabase
       .from("caption_votes")
-      .select("*")
+      .select("*", { count: "exact", head: true })
 
-    if (!votes) return
+    const { count: upvotes } = await supabase
+      .from("caption_votes")
+      .select("*", { count: "exact", head: true })
+      .eq("vote_value", 1)
 
-    const upvotes = votes.filter((v) => v.vote_value === true || v.vote_value === 1).length
-    const downvotes = votes.length - upvotes
+    const total = totalVotes ?? 0
+    const up = upvotes ?? 0
+    const down = total - up
 
-    // Get top voted captions by counting votes per caption
+    let allVotes: any[] = []
+    let from = 0
+    const pageSize = 1000
+
+    while (true) {
+      const { data: page } = await supabase
+        .from("caption_votes")
+        .select("caption_id")
+        .range(from, from + pageSize - 1)
+
+      if (!page || page.length === 0) break
+
+      allVotes = allVotes.concat(page)
+
+      if (page.length < pageSize) break
+      from += pageSize
+    }
+
     const voteCounts: Record<string, number> = {}
-    votes.forEach((v) => {
+
+    allVotes.forEach((v) => {
       const id = v.caption_id
       if (!id) return
       voteCounts[id] = (voteCounts[id] || 0) + 1
@@ -73,63 +91,116 @@ export default function AdminPage() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
 
-    // Fetch the actual captions
     const topCaptions = await Promise.all(
       topIds.map(async ([id, count]) => {
         const { data } = await supabase
           .from("captions")
-          .select("*")
+          .select("id, content")
           .eq("id", id)
           .single()
-        return { ...data, voteCount: count }
+
+        return data ? { ...data, voteCount: count } : null
       })
     )
 
     setVoteStats({
-      totalVotes: votes.length,
-      upvotes,
-      downvotes,
+      totalVotes: total,
+      upvotes: up,
+      downvotes: down,
       topCaptions: topCaptions.filter(Boolean),
     })
   }
 
+  const statCard = {
+    background: "rgba(131, 158, 168, 0.42)",
+    border: "1px solid rgba(98, 107, 46, 0.25)",
+    borderRadius: "24px",
+    padding: "24px",
+    cursor: "pointer",
+    boxShadow: "0 18px 45px rgba(78, 58, 46, 0.10)",
+    backdropFilter: "blur(16px)",
+    transition: "all 0.2s ease",
+  }
+
   return (
     <div>
-      <h1 style={{ color: "#826b57", fontSize: "28px", fontWeight: "700", marginBottom: "8px" }}>
-        Dashboard
-      </h1>
-      <p style={{ color: "#555", marginBottom: "40px", fontSize: "14px" }}>
-        Overview of your database
-      </p>
+      <div style={{ marginBottom: "38px" }}>
+        <p
+          style={{
+            color: colors.olive,
+            fontSize: "12px",
+            letterSpacing: "0.16em",
+            textTransform: "uppercase",
+            fontWeight: "800",
+            marginBottom: "8px",
+          }}
+        >
+          Admin Control Panel
+        </p>
+
+        <h1
+          style={{
+            color: colors.text,
+            fontSize: "42px",
+            fontWeight: "800",
+            margin: 0,
+            fontFamily: "Georgia, serif",
+          }}
+        >
+          Dashboard
+        </h1>
+
+        <p style={{ color: colors.muted, marginTop: "10px", fontSize: "15px" }}>
+          A soft overview of your database, captions, votes, and activity.
+        </p>
+      </div>
 
       {loading ? (
-        <p style={{ color: "#555" }}>Loading statistics...</p>
+        <p style={{ color: colors.muted }}>Loading statistics...</p>
       ) : (
         <>
-          {/* General stats */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-            gap: "16px",
-            marginBottom: "48px",
-          }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
+              gap: "18px",
+              marginBottom: "52px",
+            }}
+          >
             {stats.map((stat) => (
               <Link key={stat.label} href={stat.href} style={{ textDecoration: "none" }}>
                 <div
-                  style={{
-                    background: "hsl(190, 38%, 84%)",
-                    border: "1px solid #826b57",
-                    borderRadius: "4px",
-                    padding: "20px",
-                    cursor: "pointer",
+                  style={statCard}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-4px)"
+                    e.currentTarget.style.background = "rgba(131, 158, 168, 0.56)"
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#444")}
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#222")}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)"
+                    e.currentTarget.style.background = "rgba(131, 158, 168, 0.42)"
+                  }}
                 >
-                  <div style={{ color: "#fff", fontSize: "28px", fontWeight: "700", marginBottom: "4px" }}>
+                  <div
+                    style={{
+                      color: "#fffaf1",
+                      fontSize: "34px",
+                      fontWeight: "800",
+                      marginBottom: "6px",
+                      textShadow: "0 2px 10px rgba(78, 58, 46, 0.18)",
+                    }}
+                  >
                     {stat.value.toLocaleString()}
                   </div>
-                  <div style={{ color: "#666", fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+
+                  <div
+                    style={{
+                      color: colors.text,
+                      fontSize: "11px",
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      fontWeight: "800",
+                    }}
+                  >
                     {stat.label}
                   </div>
                 </div>
@@ -137,70 +208,120 @@ export default function AdminPage() {
             ))}
           </div>
 
-          {/* Caption voting stats */}
-          <h2 style={{ color: "#826b57", fontSize: "18px", fontWeight: "600", marginBottom: "16px" }}>
+          <h2
+            style={{
+              color: colors.text,
+              fontSize: "24px",
+              fontWeight: "800",
+              marginBottom: "18px",
+              fontFamily: "Georgia, serif",
+            }}
+          >
             Caption Voting Statistics
           </h2>
 
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "16px",
-            marginBottom: "32px",
-          }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+              gap: "18px",
+              marginBottom: "38px",
+            }}
+          >
             {[
-              { label: "Total Votes", value: voteStats.totalVotes, color: "#fff" },
-              { label: "Upvotes", value: voteStats.upvotes, color: "rgb(110, 135, 110)" },
-              { label: "Downvotes", value: voteStats.downvotes, color: "rgb(178, 100, 100)" },
+              { label: "Total Votes", value: voteStats.totalVotes, color: "#fffaf1" },
+              { label: "Upvotes", value: voteStats.upvotes, color: colors.olive },
+              { label: "Downvotes", value: voteStats.downvotes, color: colors.danger },
             ].map((s) => (
-              <div key={s.label} style={{
-                background: "hsl(190, 38%, 84%)",
-                border: "1px solid #826b57",
-                borderRadius: "4px",
-                padding: "20px",
-              }}>
-                <div style={{ color: s.color, fontSize: "32px", fontWeight: "700", marginBottom: "4px" }}>
+              <div key={s.label} style={statCard}>
+                <div
+                  style={{
+                    color: s.color,
+                    fontSize: "36px",
+                    fontWeight: "800",
+                    marginBottom: "6px",
+                  }}
+                >
                   {s.value.toLocaleString()}
                 </div>
-                <div style={{ color: "#666", fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+
+                <div
+                  style={{
+                    color: colors.text,
+                    fontSize: "11px",
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    fontWeight: "800",
+                  }}
+                >
                   {s.label}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Top voted captions */}
-          <h2 style={{ color: "#826b57", fontSize: "18px", fontWeight: "600", marginBottom: "16px" }}>
+          <h2
+            style={{
+              color: colors.text,
+              fontSize: "24px",
+              fontWeight: "800",
+              marginBottom: "18px",
+              fontFamily: "Georgia, serif",
+            }}
+          >
             Most Voted Captions
           </h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {voteStats.topCaptions.length === 0 && (
-              <p style={{ color: "#555" }}>No vote data found.</p>
+              <p style={{ color: colors.muted }}>No vote data found.</p>
             )}
+
             {voteStats.topCaptions.map((caption, i) => (
-              <div key={caption?.id || i} style={{
-                background: "hsl(190, 38%, 84%)",
-                border: "1px solid #826b57",
-                borderRadius: "4px",
-                padding: "16px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}>
+              <div
+                key={caption?.id || i}
+                style={{
+                  background: "rgba(255, 250, 241, 0.76)",
+                  border: "1px solid rgba(98, 107, 46, 0.22)",
+                  borderRadius: "22px",
+                  padding: "18px 20px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "16px",
+                  boxShadow: "0 14px 35px rgba(78, 58, 46, 0.08)",
+                  backdropFilter: "blur(14px)",
+                }}
+              >
                 <div>
-                  <span style={{ color: "#555", fontSize: "12px", marginRight: "8px" }}>#{i + 1}</span>
-                  <span style={{ color: "#624848", fontSize: "14px" }}>{caption?.content || "—"}</span>
+                  <span
+                    style={{
+                      color: colors.olive,
+                      fontSize: "13px",
+                      marginRight: "10px",
+                      fontWeight: "800",
+                    }}
+                  >
+                    #{i + 1}
+                  </span>
+
+                  <span style={{ color: colors.text, fontSize: "15px" }}>
+                    {caption?.content || "—"}
+                  </span>
                 </div>
-                <div style={{
-                  background: "#ffffff",
-                  border: "1px solid #333",
-                  borderRadius: "3px",
-                  padding: "4px 10px",
-                  color: "#563d3d",
-                  fontSize: "13px",
-                  fontWeight: "600",
-                  flexShrink: 0,
-                }}>
+
+                <div
+                  style={{
+                    background: colors.cream,
+                    border: "1px solid rgba(98, 107, 46, 0.25)",
+                    borderRadius: "999px",
+                    padding: "7px 14px",
+                    color: colors.text,
+                    fontSize: "13px",
+                    fontWeight: "800",
+                    flexShrink: 0,
+                  }}
+                >
                   {caption.voteCount} votes
                 </div>
               </div>
